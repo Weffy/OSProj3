@@ -1,3 +1,5 @@
+import java.util.Random;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class Buffer extends Thread {
@@ -7,6 +9,12 @@ public class Buffer extends Thread {
 	static int numOfItems = 0;
 	static ReentrantLock l = new ReentrantLock();
 	
+	String name;
+	
+	public Buffer(String name) {
+		this.name = name;
+		
+	}
 	public Buffer(int p1, int p2, int p3, int p4, int p5, int p6) {
 		int[] input = new int[6]; 
 		input[0] = p1;
@@ -37,27 +45,23 @@ public class Buffer extends Thread {
 	
 	public void runSimulation() {
 		System.out.println("run sim...");
-		Thread p1 = new Thread("p1");
-//		Thread c1 = new Thread("c1");
-//		System.out.println(p1.getName());
-//		System.out.println(c1.getName());
-		
+		Buffer p1 = new Buffer("p1");
 		p1.start();
+		Buffer c1 = new Buffer("c1");
+		c1.start();
+
 	}
-	
-	
 	public void run() {
-		//while(true) {
-		for (int i = 0; i < 5; i++) { //just using this for now so its not constantly running...
-			System.out.println("in run method...");
-			// TODO Auto-generated method stub
-			//get lock
-			//Lock();
-			if (this.getName().substring(0, 1).equals("p")) {
-				System.out.println("producer");
-			} else if (this.getName().substring(0, 1).equals("c")) {
-				System.out.println("consumer");
+
+		for (int i = 0; i < 5; i++) {
+			sleep();
+			System.out.println(this.name + ": run method");
+			if (this.name.substring(0, 1).equals("p")) {
+				System.out.println("I am a producer thread");
+			} else if (this.name.substring(0, 1).equals("c")) {
+				System.out.println("I am a consumer thread");
 			}
+			sleep();
 		}
 	}
 	
@@ -71,6 +75,24 @@ public class Buffer extends Thread {
 		}
 	}
 	
+	public static void sleep() {
+		long zzz = rng();
+		try {
+//			System.out.println("sleep time: " + zzz);
+			TimeUnit.MILLISECONDS.sleep(zzz);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	}
+
+	public static long rng() {
+		Random rng = new Random();
+		long randNum = (long) rng.nextInt(500); 
+		return randNum;
+	}
+	
 	public static void main(String[] args) {
 		//Part 0, Test 1 (optional)
 		Buffer b = new Buffer(10, 1, 0, 20, 20, 10);
@@ -82,6 +104,8 @@ public class Buffer extends Thread {
 		
 		
 	}
+
+
 
 
 }
