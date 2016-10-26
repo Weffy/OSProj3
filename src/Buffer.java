@@ -6,13 +6,30 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class Buffer extends Thread {
 
+	/*
+	 * arrays to manage buffer
+	 * consumer threads
+	 * producer threads
+	 * 
+	 * she didnt specify how to manage these things
+	 */
 	static String[] buffer;
 	static Buffer[] consumers;
 	static Buffer[] producers;
+	
+	
+	/*
+	 * using these as pointers to track where we are in teh array
+	 * these ints will just point to the indicies in the arrays
+	 */
 	static int dataStart = 0;
 	static int dataEnd = 0;
 	static int numOfItems = 0;
+	
 	static ReentrantLock l = new ReentrantLock();
+	
+	
+	
 	
 	//constructor items
 	/*
@@ -33,12 +50,23 @@ public class Buffer extends Thread {
 	static long zzzCons;
 	static int prodMsgs;
 	
+	/*
+	 * how we will identify the Thread
+	 * consumers will do 1 thing, producers do the other
+	 * you can see how i split a lot of the methods using this
+	 */
 	String name;
+	/*
+	 * the producers are supposed to produce a set # of messages...
+	 * I just have a small for loop running and i'm not using this as a limit yet...
+	 */
 	int msgsProduced;
+	
 	public Buffer(String name) {
 		this.name = name;
 		
 	}
+	
 	public Buffer(int size, int numProd, int numCons, int zzzProd, int zzzCons, int prodMsgs) {
 		Buffer.size = size;
 		buffer = new String[size];
@@ -55,12 +83,16 @@ public class Buffer extends Thread {
 		Buffer.zzzCons = zzzCons;
 		Buffer.prodMsgs = prodMsgs;
 		
+		//stubs!
 		System.out.println("prod arr: " + producers.length);
 		System.out.println("cons arr: " + consumers.length);		
 		
 
 	}
-	
+	/*
+	 * figures out if it is a consumer or producer
+	 * assigns to the corresponding array and populates the array
+	 */
 	public static void createThreads(int amount, String x) {
 		
 		if (x.equals("p")) {
@@ -79,6 +111,12 @@ public class Buffer extends Thread {
 
 	}
 	
+	/*
+	 * she offered a different method to get timestamps on comet...
+	 * I couldn't get it to work.  I found this method to get a timestamp
+	 * if you can figure out her method, go for it...
+	 * otherwise, this should be sufficient
+	 */
 	public String getTimestamp() {
 		DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm:ss");
 		Date dateobj = new Date();
@@ -86,7 +124,10 @@ public class Buffer extends Thread {
 		return timestamp;
 	}
 	
-	
+	/*
+	 * the consumers shouldn't technically be making a message and putting it into the array...
+	 * I am using the messages to see that they are doing anything at all
+	 */
 	public String produceMessage() {
 		String type = "";
 		if (this.name.substring(0, 1).equals("p")) {
@@ -102,6 +143,9 @@ public class Buffer extends Thread {
 
 	}
 	
+	/*
+	 * keeping these two synch'd should manage a lot of our concurrency issues with data
+	 */
 	public synchronized void produceItem() {
 		String message = produceMessage();
 		System.out.println(message);
@@ -119,6 +163,9 @@ public class Buffer extends Thread {
 		numOfItems--;
 	}
 	
+	/*
+	 * just goes through the arrays and starts all of the threads 
+	 */
 	public void runSimulation() {
 		/*
 		 * use teh arrays here!!!!
@@ -137,6 +184,12 @@ public class Buffer extends Thread {
 		}
 
 	}
+	
+	/*
+	 * we need logic to determine if we can call a producer or consumer...
+	 * lock, CV, or semaphore shit will go here
+	 * right now they just call their methods...
+	 */
 	public void run() {
 
 		for (int i = 0; i < 5; i++) {
@@ -153,16 +206,29 @@ public class Buffer extends Thread {
 		}
 	}
 	
+	/*
+	 * i was using this for testing purposes...
+	 * might not be needed anymore
+	 */
 	public static int size() {
 		return buffer.length; 
 	}
-	
+
+	/*
+	 * i was using this for testing purposes...
+	 * might not be needed anymore
+	 */
 	public void printData() {
 		for (int i = 0; i < buffer.length; i++) {
 			System.out.println(buffer[i]);
 		}
 	}
 	
+	/*
+	 * borrowed this from HW5 & HW6...
+	 * i wanted to sleep the threads to force the scheduler to switch between the active threads
+	 * we can start looking at the strings in the buffer to see if there are data issues
+	 */
 	public void sleep() {
 		long zzz = 0;
 		if (this.name.substring(0, 1).equals("p")) {
@@ -181,13 +247,17 @@ public class Buffer extends Thread {
 		
 	}
 	
+	
 	public static void main(String[] args) {
 		//Part 0, Test 1 (optional)
-		Buffer b = new Buffer(10, 1, 1, 20, 20, 10);
-		b.runSimulation();
+		//Buffer b = new Buffer(10, 1, 0, 20, 20, 10);
+		//b.runSimulation();
 		//return true;
 		
-		
+		//put my own test so we can have 1 of each thread...
+		//her optional test above only has 1 producer...no consumers...
+		Buffer b = new Buffer(10, 1, 1, 20, 20, 10);
+		b.runSimulation();
 		
 		
 		
