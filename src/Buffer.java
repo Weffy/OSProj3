@@ -1,6 +1,8 @@
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -13,22 +15,22 @@ public class Buffer extends Thread {
 	 * 
 	 * she didnt specify how to manage these things
 	 */
-	static String[] buffer;
+	static Queue<String> buffer = new LinkedList<String>();
+//	static String[] buffer;
 	static Buffer[] consumers;
 	static Buffer[] producers;
 	
 	
 	/*
-	 * using these as pointers to track where we are in teh array
+	 * using these as pointers to track where we are in the array
 	 * these ints will just point to the indicies in the arrays
 	 */
-	static int dataStart = 0;
-	static int dataEnd = 0;
+
 	static int numOfItems = 0;
 	
 	static ReentrantLock l = new ReentrantLock();
 	
-	
+	static Boolean lock = false;
 	
 	
 	//constructor items
@@ -43,6 +45,7 @@ public class Buffer extends Thread {
 	* and the number of messages that each producer should produce.
 	*
 	*/
+	
 	static int size;
 	static int numProd;
 	static int numCons;
@@ -60,8 +63,8 @@ public class Buffer extends Thread {
 	 * the producers are supposed to produce a set # of messages...
 	 * I just have a small for loop running and i'm not using this as a limit yet...
 	 */
-	int msgsProduced;
-	
+	int msgsProduced = 0;
+	static int runningProdThreads = 0;
 	public Buffer(String name) {
 		this.name = name;
 		
@@ -69,7 +72,8 @@ public class Buffer extends Thread {
 	
 	public Buffer(int size, int numProd, int numCons, int zzzProd, int zzzCons, int prodMsgs) {
 		Buffer.size = size;
-		buffer = new String[size];
+//		buffer = new String[size];
+//		System.out.println("Buffer intialized to size: " + buffer.length);
 		
 		Buffer.numProd = numProd;
 		producers = new Buffer[numProd];
@@ -84,8 +88,8 @@ public class Buffer extends Thread {
 		Buffer.prodMsgs = prodMsgs;
 		
 		//stubs!
-		System.out.println("prod arr: " + producers.length);
-		System.out.println("cons arr: " + consumers.length);		
+//		System.out.println("prod arr: " + producers.length);
+//		System.out.println("cons arr: " + consumers.length);		
 		
 
 	}
@@ -118,7 +122,7 @@ public class Buffer extends Thread {
 	 * otherwise, this should be sufficient
 	 */
 	public String getTimestamp() {
-		DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm:ss");
+		DateFormat df = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss.SSS");
 		Date dateobj = new Date();
 		String timestamp = df.format(dateobj);
 		return timestamp;
@@ -128,39 +132,46 @@ public class Buffer extends Thread {
 	 * the consumers shouldn't technically be making a message and putting it into the array...
 	 * I am using the messages to see that they are doing anything at all
 	 */
-	public String produceMessage() {
-		String type = "";
-		if (this.name.substring(0, 1).equals("p")) {
-			type = " produced...";
-		} else if (this.name.substring(0, 1).equals("c")) {
-			type = " consumed...";		
-		}
-		StringBuilder message = new StringBuilder(this.name);
-		message.append(type);
-		String timestamp = getTimestamp();
-		message.append(timestamp);
-		return new String(message);
-
-	}
+//	public String produceMessage() {
+//		String type = "";
+//		
+//		if (this.name.substring(0, 1).equals("p")) {
+//			type = " produced timestamp ";
+//		} 
+//		StringBuilder message = new StringBuilder(this.name + ": ");
+//		message.append(type);
+//		String timestamp = getTimestamp();
+//		message.append(timestamp);
+//		return new String(message);
+//
+//	}
 	
 	/*
 	 * keeping these two synch'd should manage a lot of our concurrency issues with data
 	 */
 	public synchronized void produceItem() {
-		String message = produceMessage();
-		System.out.println(message);
-		buffer[dataEnd] = message; //writing 1's for data
-		dataEnd++;
+//		String message = produceMessage();
+		String timestamp = getTimestamp();
+		System.out.println(this.name + ": produced timestamp..." + timestamp);
+		buffer.add(timestamp);
 		numOfItems++;
+		this.msgsProduced++;
+		if (msgsProduced == Buffer.prodMsgs) {
+			this.stop();
+			runningProdThreads--;
+			//remove from array...
+			
+		}
+		System.out.println("Items in Queue: " + numOfItems);
 		
 	} 
 	
 	public synchronized void consumeItem() {
-		String message = produceMessage();
-		System.out.println(message);
-		buffer[dataStart] = message; //writing 0's for no data
-		dataStart++;
+		String timestamp = buffer.peek();
+		System.out.println(this.name + ": consumed timestamp... " + timestamp);
+		buffer.remove();
 		numOfItems--;
+		System.out.println("Items in Queue: " + numOfItems);
 	}
 	
 	/*
@@ -170,16 +181,20 @@ public class Buffer extends Thread {
 		/*
 		 * use teh arrays here!!!!
 		 */
-		System.out.println("run sim...");
+		System.out.println("run simulation...");
 //		Buffer p1 = new Buffer("p1");
 //		p1.start();
 //		Buffer c1 = new Buffer("c1");
 //		c1.start();
-		
+//		System.out.println("preloops");
 		for (int i = 0; i < producers.length; i++) {
+//			System.out.println("prod: " + producers.length);
+			runningProdThreads++;
 			producers[i].start();
+			
 		}
 		for (int i = 0; i < consumers.length; i++) {
+//			System.out.println("cons: " + consumers.length);
 			consumers[i].start();
 		}
 
@@ -191,19 +206,55 @@ public class Buffer extends Thread {
 	 * right now they just call their methods...
 	 */
 	public void run() {
-
-		for (int i = 0; i < 5; i++) {
+		while (this.msgsProduced != prodMsgs) {
+//		while (runningProdThreads != 0) {
+//		for (int i = 0; i < 5; i++) {
 			sleep();
-			System.out.println(this.name + ": run method");
+//			System.out.println(this.name + ": run method");
 			if (this.name.substring(0, 1).equals("p")) {
 //				System.out.println("I am a producer thread");
-				this.produceItem();
+				if ( !isLocked() ) {
+					//proceed
+					if (numOfItems < Buffer.size) {
+//						System.out.println("about to produce");
+						lock = true;
+						this.produceItem();
+						lock = false;
+					}
+				} else {
+					//wait
+					while ( isLocked() ) {
+						spin();
+					}
+				}
+
 			} else if (this.name.substring(0, 1).equals("c")) {
 //				System.out.println("I am a consumer thread");
-				this.consumeItem();
+				if ( !isLocked() ) {
+					//proceed
+					if (numOfItems > 0) {
+//						System.out.println("about to consume");
+						lock = true;
+						this.consumeItem();
+						lock = false;
+					}
+				} else {
+					//wait
+					while ( isLocked() ) {
+						spin();
+					}
+				}
 			}
 			sleep();
 		}
+	}
+	
+	public void spin() {
+		sleep();
+	}
+	
+	public Boolean isLocked() {
+		return lock;
 	}
 	
 	/*
@@ -211,18 +262,18 @@ public class Buffer extends Thread {
 	 * might not be needed anymore
 	 */
 	public static int size() {
-		return buffer.length; 
+		return Buffer.size; 
 	}
 
 	/*
 	 * i was using this for testing purposes...
 	 * might not be needed anymore
 	 */
-	public void printData() {
-		for (int i = 0; i < buffer.length; i++) {
-			System.out.println(buffer[i]);
-		}
-	}
+//	public void printData() {
+//		for (int i = 0; i < buffer.length; i++) {
+//			System.out.println(buffer[i]);
+//		}
+//	}
 	
 	/*
 	 * borrowed this from HW5 & HW6...
@@ -256,10 +307,11 @@ public class Buffer extends Thread {
 		
 		//put my own test so we can have 1 of each thread...
 		//her optional test above only has 1 producer...no consumers...
-		Buffer b = new Buffer(10, 1, 1, 20, 20, 10);
+		Buffer b = new Buffer(10, 5, 5, 20, 20, 10);
 		b.runSimulation();
-		
-		
+		for (int i = 0; i < Buffer.producers.length; i++) {
+			System.out.println(Buffer.producers[i].msgsProduced);
+		}
 		
 	}
 
